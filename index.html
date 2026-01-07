@@ -92,4 +92,175 @@ Colorado Edition — 2026 Federal & State Tax Law (Projected)
   </p>
   <p class="note">
     Overtime often appears overtaxed because payroll systems annualize high-earning
-    pay periods, which increases withh
+    pay periods, which increases withholding.
+  </p>
+  <p class="note">
+    When you file your tax return, your <strong>actual annual income</strong>
+    determines your true tax rate.
+  </p>
+</details>
+</div>
+
+<!-- FILING STATUS -->
+<div class="section">
+<h2>Filing Status</h2>
+<select id="filingStatus">
+  <option value="single">Single</option>
+  <option value="married">Married Filing Jointly</option>
+</select>
+</div>
+
+<!-- DEPENDENTS -->
+<div class="section">
+<h2>Dependents</h2>
+<label>Federal Dependents <input type="number" id="fedDependents" value="0" min="0"></label>
+<label>Colorado Dependents <input type="number" id="coDependents" value="0" min="0"></label>
+<p class="note">Dependents reduce taxes through credits, not taxable income.</p>
+</div>
+
+<!-- STATE -->
+<div class="section">
+<h2>Work / Resident State</h2>
+<select id="state">
+  <option value="CO">Colorado</option>
+  <option value="none">No State Income Tax</option>
+</select>
+</div>
+
+<!-- EARNINGS -->
+<div class="section">
+<h2>Earnings</h2>
+<label>Base Pay <input type="number" id="basePay" value="0"></label>
+<label>Overtime Pay <input type="number" id="overtimePay" value="0"></label>
+<label>FLSA Pay <input type="number" id="flsaPay" value="0"></label>
+<div class="total">Gross Pay: $<span id="grossPay">0.00</span></div>
+</div>
+
+<!-- PRE-TAX -->
+<div class="section">
+<h2>Pre-Tax Deductions</h2>
+<label>401(a) <input type="number" id="401a" value="0"></label>
+<label>457(b) <input type="number" id="457" value="0"></label>
+<label>FPPA <input type="number" id="fppa" value="0"></label>
+<label>Group Health <input type="number" id="health" value="0"></label>
+<label>Group Vision <input type="number" id="vision" value="0"></label>
+<label>Group Dental <input type="number" id="dental" value="0"></label>
+<label>Supplemental Life <input type="number" id="life" value="0"></label>
+<label>Long-Term Disability <input type="number" id="ltd" value="0"></label>
+<label>Short-Term Disability <input type="number" id="std" value="0"></label>
+<div class="total">Pre-Tax Total: $<span id="pretaxTotal">0.00</span></div>
+</div>
+
+<!-- STATE DEDUCTIONS -->
+<div class="section">
+<h2>Colorado State-Only Deductions</h2>
+<label>Uniforms <input type="number" id="uniforms" value="0"></label>
+<label>Uniform Cleaning & Laundry <input type="number" id="laundry" value="0"></label>
+<label>Cell Phone (Work Portion) <input type="number" id="cell" value="0"></label>
+</div>
+
+<!-- POST-TAX -->
+<div class="section">
+<h2>Post-Tax Deductions</h2>
+<label>Union Dues <input type="number" id="union" value="0"></label>
+<label>Retirement Loan Repayment <input type="number" id="loan" value="0"></label>
+</div>
+
+<!-- TAXES -->
+<div class="section">
+<h2>Taxes</h2>
+<p>Federal Income Tax: $<span id="fedTax">0.00</span></p>
+<p>Colorado Income Tax (4.25%): $<span id="stateTax">0.00</span></p>
+<p>Medicare (1.45%): $<span id="medicare">0.00</span></p>
+</div>
+
+<!-- NET -->
+<div class="section">
+<h2>Net Pay</h2>
+<div class="total">$<span id="netPay">0.00</span></div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  Educational estimator only. Not tax advice.<br><br>
+  <strong>Make Live Fire Great Again!</strong><br><br>
+
+  <!-- Optional GIF -->
+  <img
+    src="trump-dance.gif"
+    alt="Dancing figure"
+    style="height: 2in; display: block; margin: 0 auto;"
+  >
+</div>
+
+</div>
+
+<script>
+function n(id){ return parseFloat(document.getElementById(id).value) || 0; }
+
+function calcFederalTax(income, status) {
+  let tax = 0;
+  const brackets = status === "married" ? [
+    [23200, 0.10],
+    [94300, 0.12],
+    [201050, 0.22]
+  ] : [
+    [11600, 0.10],
+    [47150, 0.12],
+    [100525, 0.22]
+  ];
+
+  let last = 0;
+  for (let [cap, rate] of brackets) {
+    if (income > cap) {
+      tax += (cap - last) * rate;
+      last = cap;
+    } else {
+      tax += (income - last) * rate;
+      return tax;
+    }
+  }
+  return tax;
+}
+
+function calculate(){
+  const gross = n("basePay") + n("overtimePay") + n("flsaPay");
+
+  const pretax =
+    n("401a")+n("457")+n("fppa")+n("health")+n("vision")+
+    n("dental")+n("life")+n("ltd")+n("std");
+
+  const filing = document.getElementById("filingStatus").value;
+  const standardDeduction = filing === "married" ? 32200 : 16100;
+
+  const federalTaxable = Math.max(0, gross - pretax - standardDeduction);
+  let federalTax = calcFederalTax(federalTaxable, filing);
+
+  federalTax = Math.max(0, federalTax - (n("fedDependents") * 2000));
+
+  const coDeductions = n("uniforms")+n("laundry")+n("cell");
+  const coloradoTaxable = Math.max(0, federalTaxable - coDeductions);
+  let coloradoTax = coloradoTaxable * 0.0425;
+  coloradoTax = Math.max(0, coloradoTax - (n("coDependents") * 500));
+
+  const medicare = gross * 0.0145;
+  const postTax = n("union")+n("loan");
+
+  const net =
+    gross - pretax - federalTax - coloradoTax - medicare - postTax;
+
+  document.getElementById("grossPay").textContent = gross.toFixed(2);
+  document.getElementById("pretaxTotal").textContent = pretax.toFixed(2);
+  document.getElementById("fedTax").textContent = federalTax.toFixed(2);
+  document.getElementById("stateTax").textContent = coloradoTax.toFixed(2);
+  document.getElementById("medicare").textContent = medicare.toFixed(2);
+  document.getElementById("netPay").textContent = net.toFixed(2);
+}
+
+document.querySelectorAll("input, select").forEach(el =>
+  el.addEventListener("input", calculate)
+);
+</script>
+
+</body>
+</html>
